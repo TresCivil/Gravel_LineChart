@@ -14,17 +14,17 @@
     --seg-bg:#eeeff4; --seg-on:#ffffff;
     --prod:#7A55C7; --haul:#0B7FA6;
     --tip-bg:#1f2433; --tip-ink:#ffffff; --tip-ink-2:#c3c8d6;
-    --fill-op-top:.22; --fill-op-bot:0;
+    --fill-op-top:.22; --fill-op-bot:0; --ring:#ffffff;
   }
   @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
+    :root[data-theme="auto"]{
       --bg:#121317; --card:#1a1b20; --border:#2a2c34;
       --ink:#eceef4; --ink-2:#a4abbd; --ink-3:#7c8396;
       --grid:#262830; --axis:#33363f;
       --seg-bg:#24262d; --seg-on:#34373f;
       --prod:#9B7BE8; --haul:#2E9BBD;
       --tip-bg:#f1f2f6; --tip-ink:#1a1b20; --tip-ink-2:#5b6478;
-      --fill-op-top:.28;
+      --fill-op-top:.28; --ring:#1a1b20;
     }
   }
   :root[data-theme="dark"]{
@@ -34,13 +34,13 @@
     --seg-bg:#24262d; --seg-on:#34373f;
     --prod:#9B7BE8; --haul:#2E9BBD;
     --tip-bg:#f1f2f6; --tip-ink:#1a1b20; --tip-ink-2:#5b6478;
-    --fill-op-top:.28;
+    --fill-op-top:.28; --ring:#1a1b20;
   }
   *{box-sizing:border-box}
   [hidden]{display:none !important}
   html,body{margin:0;height:100%;overflow:hidden}
-  body{background:var(--bg);color:var(--ink);font:14px/1.4 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;padding:12px;display:flex}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 22px 16px;flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  body{background:transparent;color:var(--ink);font:14px/1.4 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;padding:8px;display:flex}
+  .card{background:transparent;border:0;padding:4px 6px;flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
   .head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
   h1{font-size:17px;font-weight:600;margin:0 0 4px}
   .sub{color:var(--ink-2);font-size:13px;margin:0}
@@ -151,6 +151,7 @@
     $("demo").hidden = !!payload;
     const today = parse(src.today) || (()=>{const n=new Date();return new Date(n.getFullYear(),n.getMonth(),n.getDate());})();
     state.data = { p:toMap(src.p), h:toMap(src.h), ytd:(src.ytd||"fy").toLowerCase(), today };
+    if(src.theme) document.documentElement.setAttribute("data-theme", src.theme);
     if(src.title) $("title").firstChild.nodeValue = src.title;
     if(src.range && !state._userPicked) setRange(String(src.range).toLowerCase(), false);
     render();
@@ -246,8 +247,8 @@
 
     // hover layer
     const cross = el("line",{y1:m.t,y2:m.t+ih,stroke:"var(--axis)","stroke-width":1,visibility:"hidden"},svg);
-    const dotP = el("rect",{width:9,height:9,rx:2,fill:"var(--prod)",stroke:"var(--card)","stroke-width":2,visibility:"hidden"},svg);
-    const dotH = el("circle",{r:5,fill:"var(--haul)",stroke:"var(--card)","stroke-width":2,visibility:"hidden"},svg);
+    const dotP = el("rect",{width:9,height:9,rx:2,fill:"var(--prod)",stroke:"var(--ring)","stroke-width":2,visibility:"hidden"},svg);
+    const dotH = el("circle",{r:5,fill:"var(--haul)",stroke:"var(--ring)","stroke-width":2,visibility:"hidden"},svg);
     const hit = el("rect",{x:m.l,y:m.t,width:iw,height:ih,fill:"transparent"},svg);
     const tip = $("tip");
     const show = (evt)=>{
