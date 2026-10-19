@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Production vs Haulage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f4f8; --card:#ffffff; --border:#e6e6ee;
+    --ink:#1f2433; --ink-2:#5b6478; --ink-3:#8a92a6;
+    --grid:#ececf2; --axis:#d9dbe4;
+    --seg-bg:#eeeff4; --seg-on:#ffffff;
+    --prod:#7A55C7; --haul:#0B7FA6;
+    --tip-bg:#1f2433; --tip-ink:#ffffff; --tip-ink-2:#c3c8d6;
+    --fill-op-top:.22; --fill-op-bot:0;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#121317; --card:#1a1b20; --border:#2a2c34;
+      --ink:#eceef4; --ink-2:#a4abbd; --ink-3:#7c8396;
+      --grid:#262830; --axis:#33363f;
+      --seg-bg:#24262d; --seg-on:#34373f;
+      --prod:#9B7BE8; --haul:#2E9BBD;
+      --tip-bg:#f1f2f6; --tip-ink:#1a1b20; --tip-ink-2:#5b6478;
+      --fill-op-top:.28;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#121317; --card:#1a1b20; --border:#2a2c34;
+    --ink:#eceef4; --ink-2:#a4abbd; --ink-3:#7c8396;
+    --grid:#262830; --axis:#33363f;
+    --seg-bg:#24262d; --seg-on:#34373f;
+    --prod:#9B7BE8; --haul:#2E9BBD;
+    --tip-bg:#f1f2f6; --tip-ink:#1a1b20; --tip-ink-2:#5b6478;
+    --fill-op-top:.28;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink);font:14px/1.4 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;padding:12px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 22px 16px;height:100%;display:flex;flex-direction:column;min-height:300px}
+  .head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+  h1{font-size:17px;font-weight:600;margin:0 0 4px}
+  .sub{color:var(--ink-2);font-size:13px;margin:0}
+  .badge{display:inline-block;margin-left:8px;font-size:11px;font-weight:500;padding:1px 7px;border-radius:999px;background:var(--seg-bg);color:var(--ink-2);vertical-align:middle}
+  .seg{display:flex;background:var(--seg-bg);border-radius:10px;padding:3px;gap:2px}
+  .seg button{border:0;background:transparent;color:var(--ink-2);font:600 13px Inter,system-ui,sans-serif;padding:6px 13px;border-radius:8px;cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--seg-on);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .seg button:focus-visible{outline:2px solid var(--prod);outline-offset:1px}
+  .plot{position:relative;flex:1;min-height:200px;margin-top:14px}
+  svg{display:block;width:100%;height:100%;overflow:visible}
+  .tick{fill:var(--ink-3);font-size:11px}
+  .endlbl{font-size:11px;font-weight:600;fill:var(--ink)}
+  .tip{position:absolute;pointer-events:none;background:var(--tip-bg);color:var(--tip-ink);border-radius:8px;padding:8px 10px;font-size:12px;white-space:nowrap;opacity:0;transform:translateY(-4px);transition:opacity .08s}
+  .tip .d{color:var(--tip-ink-2);margin-bottom:4px;font-weight:500}
+  .tip .r{display:flex;align-items:center;gap:6px}
+  .tip .r b{margin-left:auto;padding-left:14px;font-weight:600}
+  .sw{width:9px;height:9px;border-radius:2px;display:inline-block;flex:none}
+  .sw.sq{border-radius:2px}.sw.ci{border-radius:50%}
+  .legend{display:flex;gap:22px;flex-wrap:wrap;margin-top:12px;color:var(--ink-2);font-size:13px}
+  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .legend b{color:var(--ink);font-weight:600}
+  .empty{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-size:13px}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head">
+    <div>
+      <h1 id="title">Production vs Haulage — daily tonnes<span id="demo" class="badge" hidden>Demo data</span></h1>
+      <p class="sub" id="sub">Crushing Production Log vs Removal &amp; Haulage Log</p>
+    </div>
+    <div class="seg" role="group" aria-label="Date range">
+      <button data-r="30" aria-pressed="true">30d</button>
+      <button data-r="90" aria-pressed="false">90d</button>
+      <button data-r="ytd" aria-pressed="false">YTD</button>
+    </div>
+  </div>
+  <div class="plot" id="plot">
+    <svg id="svg" role="img" aria-labelledby="title sub"></svg>
+    <div class="tip" id="tip"></div>
+    <div class="empty" id="empty" hidden>No records in this period</div>
+  </div>
+  <div class="legend">
+    <span><i class="sw sq" style="background:var(--prod)"></i>Tonnes produced (crushed) <b id="totP"></b></span>
+    <span><i class="sw ci" style="background:var(--haul)"></i>Tonnes removed (hauled) <b id="totH"></b></span>
+  </div>
+  <table class="sr" id="sr"></table>
+</div>
+
+<script>
+/* ============================================================
+   Production vs Haulage — daily tonnes
+   Data arrives in the URL hash as EncodeUrl(JSON({...})) from Power Fx:
+     { p:[{d:"2026-10-01", t:123.4}, ...],   // production, one row per day (or per record — summed here)
+       h:[{d:"2026-10-01", t: 98.0}, ...],   // haulage
+       ytd:"fy" | "cal",                     // optional, default "fy" (1 July start)
+       range:"30" | "90" | "ytd",            // optional starting tab
+       today:"2026-10-19" }                  // optional anchor date
+   No hash → demo data so the page can be previewed on its own.
+   ============================================================ */
+(function(){
+  const $ = id => document.getElementById(id);
+  const NS = "http://www.w3.org/2000/svg";
+  const DAY = 86400000;
+  let state = { range:"30", data:null };
+
+  const pad2 = n => String(n).padStart(2,"0");
+  const key = dt => dt.getFullYear()+"-"+pad2(dt.getMonth()+1)+"-"+pad2(dt.getDate());
+  const parse = s => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s||"")); return m ? new Date(+m[1], +m[2]-1, +m[3]) : null; };
+  const addDays = (dt,n) => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()+n);
+  const fmtT = v => (Math.round(v*10)/10).toLocaleString("en-AU",{maximumFractionDigits:1});
+  const fmtD = dt => dt.toLocaleDateString("en-AU",{day:"numeric",month:"short"});
+  const fmtDL = dt => dt.toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short",year:"numeric"});
+
+  function toMap(rows){
+    const m = new Map();
+    (rows||[]).forEach(r=>{
+      const d = Array.isArray(r) ? r[0] : (r.d ?? r.Date ?? r.date);
+      const t = Array.isArray(r) ? r[1] : (r.t ?? r.Tonnes ?? r.tonnes);
+      const dt = parse(d); const v = Number(t);
+      if(!dt || !isFinite(v)) return;
+      const k = key(dt); m.set(k, (m.get(k)||0) + v);
+    });
+    return m;
+  }
+
+  function readHash(){
+    const raw = location.hash.replace(/^#/,"");
+    if(!raw) return null;
+    try { return JSON.parse(decodeURIComponent(raw)); }
+    catch(e){ try { return JSON.parse(raw); } catch(e2){ console.warn("Bad payload", e2); return null; } }
+  }
+
+  function demo(){
+    const today = new Date(); const p=[], h=[];
+    for(let i=200;i>=0;i--){
+      const d = key(addDays(today,-i)); const base = 300 + (200-i)*2.2;
+      p.push({d, t: base + (i%2 ? 40 : -10) + Math.random()*20});
+      h.push({d, t: base*0.8 + (i%2 ? 25 : -15) + Math.random()*20});
+    }
+    return {p,h,ytd:"fy"};
+  }
+
+  function load(){
+    const payload = readHash();
+    const src = payload || demo();
+    $("demo").hidden = !!payload;
+    const today = parse(src.today) || (()=>{const n=new Date();return new Date(n.getFullYear(),n.getMonth(),n.getDate());})();
+    state.data = { p:toMap(src.p), h:toMap(src.h), ytd:(src.ytd||"fy").toLowerCase(), today };
+    if(src.title) $("title").firstChild.nodeValue = src.title;
+    if(src.range && !state._userPicked) setRange(String(src.range).toLowerCase(), false);
+    render();
+  }
+
+  function rangeStart(){
+    const t = state.data.today;
+    if(state.range === "90") return addDays(t,-89);
+    if(state.range === "ytd"){
+      if(state.data.ytd === "cal") return new Date(t.getFullYear(),0,1);
+      return t.getMonth() >= 6 ? new Date(t.getFullYear(),6,1) : new Date(t.getFullYear()-1,6,1);
+    }
+    return addDays(t,-29);
+  }
+
+  function setRange(r, user){
+    if(!["30","90","ytd"].includes(r)) return;
+    state.range = r; if(user) state._userPicked = true;
+    document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.r===r));
+  }
+
+  function el(tag, attrs, parent){
+    const e = document.createElementNS(NS, tag);
+    for(const k in attrs) e.setAttribute(k, attrs[k]);
+    if(parent) parent.appendChild(e); return e;
+  }
+
+  function niceMax(v){
+    if(v<=0) return 10;
+    const p = Math.pow(10, Math.floor(Math.log10(v))); const n = v/p;
+    return (n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10)*p;
+  }
+
+  function render(){
+    if(!state.data) return;
+    const start = rangeStart(), end = state.data.today;
+    const days = []; for(let d=start; d<=end; d=addDays(d,1)) days.push(d);
+    const P = days.map(d=>state.data.p.get(key(d))||0);
+    const H = days.map(d=>state.data.h.get(key(d))||0);
+    const totP = P.reduce((a,b)=>a+b,0), totH = H.reduce((a,b)=>a+b,0);
+
+    const label = state.range==="ytd" ? (state.data.ytd==="cal" ? "calendar year to date" : "financial year to date") : "last "+state.range+" days";
+    $("sub").textContent = "Crushing Production Log vs Removal & Haulage Log, " + label;
+    $("totP").textContent = fmtT(totP)+" t"; $("totH").textContent = fmtT(totH)+" t";
+    $("empty").hidden = (totP+totH) > 0;
+
+    const svg = $("svg"); svg.innerHTML = "";
+    const W = $("plot").clientWidth, Hh = $("plot").clientHeight;
+    const m = {l:44, r:52, t:8, b:24};
+    const iw = Math.max(10, W-m.l-m.r), ih = Math.max(10, Hh-m.t-m.b);
+    svg.setAttribute("viewBox", `0 0 ${W} ${Hh}`);
+
+    const ymax = niceMax(Math.max(...P, ...H) * 1.08);
+    const n = days.length;
+    const x = i => m.l + (n<=1 ? iw/2 : i*iw/(n-1));
+    const y = v => m.t + ih - (v/ymax)*ih;
+
+    // gradients
+    const defs = el("defs",{},svg);
+    [["gP","--prod"],["gH","--haul"]].forEach(([id,c])=>{
+      const g = el("linearGradient",{id,x1:0,y1:0,x2:0,y2:1},defs);
+      const cs = getComputedStyle(document.documentElement);
+      el("stop",{offset:"0%","stop-color":`var(${c})`,"stop-opacity":cs.getPropertyValue("--fill-op-top").trim()},g);
+      el("stop",{offset:"100%","stop-color":`var(${c})`,"stop-opacity":cs.getPropertyValue("--fill-op-bot").trim()||0},g);
+    });
+
+    // grid + y ticks
+    for(let i=0;i<=4;i++){
+      const v = ymax*i/4, yy = y(v);
+      el("line",{x1:m.l,x2:m.l+iw,y1:yy,y2:yy,stroke:i===0?"var(--axis)":"var(--grid)","stroke-width":1},svg);
+      const t = el("text",{x:m.l-8,y:yy+4,"text-anchor":"end",class:"tick"},svg); t.textContent = fmtT(v);
+    }
+    // x ticks
+    const want = Math.max(2, Math.floor(iw/80)), step = Math.max(1, Math.ceil(n/want));
+    for(let i=0;i<n;i+=step){
+      const t = el("text",{x:x(i),y:m.t+ih+17,"text-anchor":i===0?"start":"middle",class:"tick"},svg);
+      t.textContent = fmtD(days[i]);
+    }
+
+    const path = arr => arr.map((v,i)=>(i?"L":"M")+x(i).toFixed(1)+","+y(v).toFixed(1)).join("");
+    const area = arr => path(arr)+`L${x(n-1).toFixed(1)},${y(0)}L${x(0).toFixed(1)},${y(0)}Z`;
+    el("path",{d:area(P),fill:"url(#gP)"},svg);
+    el("path",{d:area(H),fill:"url(#gH)"},svg);
+    el("path",{d:path(P),fill:"none",stroke:"var(--prod)","stroke-width":2,"stroke-linejoin":"round","stroke-linecap":"round"},svg);
+    el("path",{d:path(H),fill:"none",stroke:"var(--haul)","stroke-width":2,"stroke-linejoin":"round","stroke-linecap":"round"},svg);
+
+    // direct end labels (latest day), nudged apart
+    let yP = y(P[n-1]), yH = y(H[n-1]);
+    if(Math.abs(yP-yH) < 14){ const mid=(yP+yH)/2, up = P[n-1]>=H[n-1]; yP = mid+(up?-7:7); yH = mid+(up?7:-7); }
+    const lp = el("text",{x:x(n-1)+8,y:yP+4,class:"endlbl"},svg); lp.textContent = fmtT(P[n-1]);
+    const lh = el("text",{x:x(n-1)+8,y:yH+4,class:"endlbl"},svg); lh.textContent = fmtT(H[n-1]);
+
+    // hover layer
+    const cross = el("line",{y1:m.t,y2:m.t+ih,stroke:"var(--axis)","stroke-width":1,visibility:"hidden"},svg);
+    const dotP = el("rect",{width:9,height:9,rx:2,fill:"var(--prod)",stroke:"var(--card)","stroke-width":2,visibility:"hidden"},svg);
+    const dotH = el("circle",{r:5,fill:"var(--haul)",stroke:"var(--card)","stroke-width":2,visibility:"hidden"},svg);
+    const hit = el("rect",{x:m.l,y:m.t,width:iw,height:ih,fill:"transparent"},svg);
+    const tip = $("tip");
+    const show = (evt)=>{
+      const r = svg.getBoundingClientRect();
+      const px = (evt.touches?evt.touches[0].clientX:evt.clientX) - r.left;
+      const i = Math.max(0, Math.min(n-1, Math.round((px-m.l)/(iw/Math.max(1,n-1)))));
+      const xx = x(i);
+      cross.setAttribute("x1",xx); cross.setAttribute("x2",xx);
+      dotP.setAttribute("x",xx-4.5); dotP.setAttribute("y",y(P[i])-4.5);
+      dotH.setAttribute("cx",xx); dotH.setAttribute("cy",y(H[i]));
+      [cross,dotP,dotH].forEach(e=>e.setAttribute("visibility","visible"));
+      const diff = P[i]-H[i];
+      tip.innerHTML = `<div class="d">${fmtDL(days[i])}</div>
+        <div class="r"><i class="sw sq" style="background:var(--prod)"></i>Produced<b>${fmtT(P[i])} t</b></div>
+        <div class="r"><i class="sw ci" style="background:var(--haul)"></i>Hauled<b>${fmtT(H[i])} t</b></div>
+        <div class="r" style="color:var(--tip-ink-2)">Net to stockpile<b style="color:var(--tip-ink)">${diff>=0?"+":""}${fmtT(diff)} t</b></div>`;
+      const tw = tip.offsetWidth, th = tip.offsetHeight;
+      let left = xx + 12; if(left+tw > W) left = xx - tw - 12;
+      const top = Math.max(0, Math.min(Hh-th, Math.min(y(P[i]),y(H[i])) - th/2));
+      tip.style.left = left+"px"; tip.style.top = top+"px"; tip.style.opacity = 1;
+    };
+    const hide = ()=>{ [cross,dotP,dotH].forEach(e=>e.setAttribute("visibility","hidden")); tip.style.opacity = 0; };
+    hit.addEventListener("mousemove",show); hit.addEventListener("touchstart",show,{passive:true});
+    hit.addEventListener("touchmove",show,{passive:true}); hit.addEventListener("mouseleave",hide);
+
+    // screen-reader table
+    $("sr").innerHTML = "<caption>Daily tonnes</caption><tr><th>Date</th><th>Produced</th><th>Hauled</th></tr>" +
+      days.map((d,i)=>`<tr><td>${key(d)}</td><td>${fmtT(P[i])}</td><td>${fmtT(H[i])}</td></tr>`).join("");
+  }
+
+  document.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click",()=>{ setRange(b.dataset.r,true); render(); }));
+  window.addEventListener("hashchange", load);
+  new ResizeObserver(()=>render()).observe($("plot"));
+  load();
+})();
+</script>
+</body>
+</html>
