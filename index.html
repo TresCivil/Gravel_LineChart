@@ -38,9 +38,9 @@
   }
   *{box-sizing:border-box}
   [hidden]{display:none !important}
-  html,body{margin:0;height:100%}
-  body{background:var(--bg);color:var(--ink);font:14px/1.4 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;padding:12px}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 22px 16px;height:100%;display:flex;flex-direction:column;min-height:300px}
+  html,body{margin:0;height:100%;overflow:hidden}
+  body{background:var(--bg);color:var(--ink);font:14px/1.4 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;padding:12px;display:flex}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 22px 16px;flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
   .head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
   h1{font-size:17px;font-weight:600;margin:0 0 4px}
   .sub{color:var(--ink-2);font-size:13px;margin:0}
@@ -49,7 +49,7 @@
   .seg button{border:0;background:transparent;color:var(--ink-2);font:600 13px Inter,system-ui,sans-serif;padding:6px 13px;border-radius:8px;cursor:pointer}
   .seg button[aria-pressed="true"]{background:var(--seg-on);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
   .seg button:focus-visible{outline:2px solid var(--prod);outline-offset:1px}
-  .plot{position:relative;flex:1;min-height:200px;margin-top:14px}
+  .plot{position:relative;flex:1;min-height:0;margin-top:14px}
   svg{display:block;width:100%;height:100%;overflow:visible}
   .tick{fill:var(--ink-3);font-size:11px}
   .endlbl{font-size:11px;font-weight:600;fill:var(--ink)}
@@ -63,7 +63,7 @@
   .legend span{display:inline-flex;align-items:center;gap:7px}
   .legend b{color:var(--ink);font-weight:600}
   .empty{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-size:13px}
-  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .sr{position:fixed;top:0;left:0;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 </style>
 </head>
 <body>
@@ -218,8 +218,9 @@
     });
 
     // grid + y ticks
-    for(let i=0;i<=4;i++){
-      const v = ymax*i/4, yy = y(v);
+    const yt = ih < 90 ? 1 : ih < 160 ? 2 : 4;
+    for(let i=0;i<=yt;i++){
+      const v = ymax*i/yt, yy = y(v);
       el("line",{x1:m.l,x2:m.l+iw,y1:yy,y2:yy,stroke:i===0?"var(--axis)":"var(--grid)","stroke-width":1},svg);
       const t = el("text",{x:m.l-8,y:yy+4,"text-anchor":"end",class:"tick"},svg); t.textContent = fmtT(v);
     }
